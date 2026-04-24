@@ -1,0 +1,15 @@
+{
+  "model": "mock-fast",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Summarize why x402-paid inference endpoints are useful for autonomous agents."
+    }
+  ],
+  "max_tokens": 250,
+  "temperature": 0.2,
+  "metadata": {
+    "client": "local-dev",
+    "task": "summarization"
+  }
+}
