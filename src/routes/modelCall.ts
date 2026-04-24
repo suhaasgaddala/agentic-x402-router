@@ -4,29 +4,15 @@ import type { AppConfig } from "../config.js";
 import { estimateMarginUsd, estimateProviderCostUsd, estimateTokensFromText } from "../billing/cost.js";
 import { getPriceForModel } from "../billing/pricing.js";
 import { formatUsdNumber } from "../billing/money.js";
-import { HttpError } from "../errors/httpError.js";
 import { createProviderRegistry } from "../providers/index.js";
 import { createModelCallSchema } from "../schemas/modelCall.js";
 import { logger, previewPromptForLog } from "../telemetry/logger.js";
+import { createX402Middleware } from "../x402/middleware.js";
 
-function phaseOnePaymentGate(config: AppConfig): RequestHandler {
-  return (_req, _res, next) => {
-    if (config.x402.enabled) {
-      next(
-        new HttpError({
-          statusCode: 501,
-          code: "X402_DEFERRED",
-          message: "Real x402 middleware is deferred to phase 2. Set X402_ENABLED=false for phase 1."
-        })
-      );
-      return;
-    }
-
-    next();
-  };
-}
-
-export function createModelCallRouter(config: AppConfig): Router {
+export function createModelCallRouter(
+  config: AppConfig,
+  paymentMiddleware: RequestHandler = createX402Middleware(config)
+): Router {
   const router = Router();
   const schema = createModelCallSchema({
     maxInputChars: config.maxInputChars,
@@ -36,8 +22,7 @@ export function createModelCallRouter(config: AppConfig): Router {
 
   router.post(
     "/v1/model-call",
-    // Phase 2 x402 middleware belongs here, before JSON parsing and Zod business validation.
-    phaseOnePaymentGate(config),
+    paymentMiddleware,
     json({ limit: config.jsonBodyLimit }),
     async (req, res, next) => {
       const startedAt = process.hrtime.bigint();

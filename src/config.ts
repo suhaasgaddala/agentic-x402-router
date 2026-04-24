@@ -52,6 +52,12 @@ const envSchema = z.object({
   X402_NETWORK: z.string().trim().default("base-sepolia"),
   X402_FACILITATOR_URL: optionalNonEmptyString,
   X402_DEFAULT_PRICE_USD: numberFromEnv(0.05).pipe(z.number().nonnegative()),
+  X402_RESOURCE_BASE_URL: optionalNonEmptyString,
+  X402_SERVICE_NAME: z.string().trim().default("x402-model-gateway"),
+  X402_SERVICE_DESCRIPTION: z
+    .string()
+    .trim()
+    .default("x402-paid model gateway for agent-discoverable LLM inference"),
 
   ANTHROPIC_API_KEY: optionalNonEmptyString,
 
@@ -73,7 +79,16 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
   const value = parsed.data;
 
   if (value.X402_ENABLED) {
-    throw new Error("X402_ENABLED=true is deferred to phase 2; phase 1 only supports local mock mode.");
+    const missing = [
+      ["X402_PAY_TO", value.X402_PAY_TO],
+      ["X402_FACILITATOR_URL", value.X402_FACILITATOR_URL]
+    ]
+      .filter(([, envValue]) => !envValue)
+      .map(([name]) => name);
+
+    if (missing.length > 0) {
+      throw new Error(`X402_ENABLED=true requires: ${missing.join(", ")}`);
+    }
   }
 
   return {
@@ -92,7 +107,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
       payTo: value.X402_PAY_TO,
       network: value.X402_NETWORK,
       facilitatorUrl: value.X402_FACILITATOR_URL,
-      defaultPriceUsd: value.X402_DEFAULT_PRICE_USD
+      defaultPriceUsd: value.X402_DEFAULT_PRICE_USD,
+      resourceBaseUrl: value.X402_RESOURCE_BASE_URL ?? value.PUBLIC_BASE_URL,
+      serviceName: value.X402_SERVICE_NAME,
+      serviceDescription: value.X402_SERVICE_DESCRIPTION
     },
     pricing: createPriceConfig(env),
     cost: createCostConfig(env)

@@ -2,21 +2,22 @@
 
 Phase 1 MVP for an **x402-paid model gateway**: a paid inference endpoint shaped for agent-discoverable LLM inference.
 
-This phase is local mock mode only. It proves the backend shape, validation, provider abstraction, pricing/cost/margin response fields, and route ordering needed for a real x402 integration later.
+The current server supports local mock mode and x402-protected mode. Model calls still use the deterministic mock provider; Anthropic is intentionally deferred.
 
 ## What This Is
 
 - A TypeScript Express server for raw-ish model calls.
 - A provider-agnostic gateway surface with a deterministic mock provider.
 - A local development target for `POST /v1/model-call`.
+- x402 payment protection for `POST /v1/model-call` when enabled.
+- Bazaar discovery metadata wired into the x402 route config.
 - A pricing and cost-estimation experiment for paid inference endpoints.
 
 ## What This Is Not Yet
 
 - Not an official Claude or Anthropic API.
 - Not a real Anthropic integration yet.
-- Not a real x402 payment integration yet.
-- Not Bazaar metadata yet.
+- Not a real Anthropic integration yet.
 - Not a frontend, auth system, dashboard, or database.
 
 ## Architecture
@@ -26,7 +27,7 @@ HTTP client
   -> request id middleware
   -> free routes: GET /health, GET /v1/models
   -> POST /v1/model-call
-       -> phase 1 payment gate (requires X402_ENABLED=false)
+       -> x402 middleware (no-op when X402_ENABLED=false)
        -> route-local express.json({ limit })
        -> Zod model-call validation
        -> provider selector
@@ -46,7 +47,7 @@ cp .env.example .env
 npm run dev
 ```
 
-Phase 1 requires:
+For local mock mode:
 
 ```bash
 X402_ENABLED=false
@@ -100,7 +101,45 @@ When `X402_ENABLED=false`, local calls work without payment and return a normali
 - `estimated_margin_usd`
 - `timing.latency_ms`
 
-If `X402_ENABLED=true`, phase 1 fails startup clearly because real x402 middleware is deferred to phase 2.
+## x402-Enabled Mode
+
+Set:
+
+```bash
+X402_ENABLED=true
+X402_PAY_TO=0xYourWalletAddress
+X402_NETWORK=base-sepolia
+X402_FACILITATOR_URL=https://x402.org/facilitator
+X402_DEFAULT_PRICE_USD=0.05
+X402_RESOURCE_BASE_URL=https://your-public-host.example
+```
+
+`POST /v1/model-call` is protected by x402. The route uses one fixed v1 price per call from `X402_DEFAULT_PRICE_USD`. Provider execution is still mock-mode until a real provider is added.
+
+The x402 middleware is mounted before route-local JSON parsing and Zod validation. An unpaid request with no body or an invalid business body should return `402 Payment Required`, not a model-call validation error.
+
+## Bazaar Discovery
+
+Discovery metadata is centralized in `src/bazaar/metadata.ts` and wired into the x402 route config with `declareDiscoveryExtension` from `@x402/extensions/bazaar`. It describes the endpoint as an x402-paid model gateway for LLM inference, model access, text generation, summarization, code, reasoning, and agent tools.
+
+## Manual Unpaid 402 Checklist
+
+Start the server with valid x402 env and `X402_ENABLED=true`, then run:
+
+```bash
+curl -i -X POST http://localhost:3000/v1/model-call
+curl -i -X POST http://localhost:3000/v1/model-call \
+  -H "content-type: application/json" \
+  --data '{}'
+curl -i http://localhost:3000/health
+curl -i http://localhost:3000/v1/models
+```
+
+Expected:
+
+- The two unpaid `POST /v1/model-call` requests return `402`, not `400`.
+- `GET /health` returns `200`.
+- `GET /v1/models` returns `200`.
 
 ## Scripts
 
@@ -113,7 +152,7 @@ npm run build
 
 ## Pricing
 
-Phase 1 uses fixed per-call prices:
+The gateway uses fixed per-call prices:
 
 - `PRICE_CLAUDE_HAIKU_USD=0.02`
 - `PRICE_CLAUDE_SONNET_USD=0.05`
@@ -129,11 +168,10 @@ Provider cost estimates are configurable with the `COST_*_PER_MTOK_USD` env vars
 - No provider secrets are required or logged in phase 1.
 - This service is intended for legitimate paid inference calls. Do not use it to simulate buyers, manipulate marketplace ranking, generate fake traffic, or automate self-calling loops.
 
-## Phase 2
+## Next Provider Phase
 
-Next phase:
+Next:
 
 - Add real Anthropic provider behind the existing `ModelProvider` interface.
-- Add real x402 middleware before route-local JSON parsing and Zod validation.
-- Add Bazaar/Agentic.Market discovery metadata in a centralized module.
-- Verify unpaid `POST /v1/model-call` returns `402` before business validation when `X402_ENABLED=true`.
+- Keep x402 middleware before route-local JSON parsing and Zod validation.
+- Verify paid requests still return usage, revenue, margin, and latency.
