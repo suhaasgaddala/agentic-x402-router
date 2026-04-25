@@ -51,6 +51,17 @@ describe("market signal bazaar metadata", () => {
   it("contains required discovery tags", () => {
     expect(marketSignalTags).toEqual(
       expect.arrayContaining([
+        // hyphenated variants for indexer compatibility
+        "market-signal",
+        "onchain-data",
+        "dexscreener",
+        "trading-bot",
+        "trading-agent",
+        "price-impact",
+        "token-data",
+        "agent-tools",
+        "usdc",
+        // space-separated variants retained alongside
         "onchain data",
         "trading",
         "market data",
@@ -71,10 +82,20 @@ describe("market signal bazaar metadata", () => {
     );
   });
 
-  it("metadata has service name, description, and at least two examples", () => {
+  it("metadata has service name, DexScreener description, and at least two examples", () => {
     expect(marketSignalMetadata.serviceName).toBe("x402 Onchain Market Signals");
-    expect(typeof marketSignalMetadata.description).toBe("string");
+    expect(marketSignalMetadata.description).toContain("DexScreener");
+    expect(marketSignalMetadata.description).toContain("liquidity");
+    expect(marketSignalMetadata.description).toContain("price impact");
     expect(marketSignalMetadata.examples.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("output example uses dexscreener as data_source", () => {
+    const ext = createMarketSignalBazaarExtensions();
+    // declareDiscoveryExtension nests the example under bazaar.info.output.example
+    type BazaarShape = { bazaar: { info: { output: { example: { data_source?: string } } } } };
+    const example = (ext as unknown as BazaarShape).bazaar.info.output.example;
+    expect(example.data_source).toBe("dexscreener");
   });
 
   it("input schema has required token and signals fields", () => {

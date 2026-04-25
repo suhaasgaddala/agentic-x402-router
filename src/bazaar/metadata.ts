@@ -174,6 +174,15 @@ export function createBazaarExtensions() {
 // ─── Market Signal endpoint ────────────────────────────────────────────────
 
 export const marketSignalTags = [
+  "market-signal",
+  "onchain-data",
+  "dexscreener",
+  "trading-bot",
+  "trading-agent",
+  "price-impact",
+  "token-data",
+  "agent-tools",
+  "usdc",
   "onchain data",
   "trading",
   "market data",
@@ -286,10 +295,8 @@ export const marketSignalMetadata = {
   mimeType: "application/json",
   tags: marketSignalTags,
   description:
-    "Pay-per-call onchain market data and market signal endpoint for agents and trading bots. " +
-    "Returns token liquidity, volume changes, price movement, pool activity, estimated price impact, " +
-    "wallet flow context, and plain-English market summaries for autonomous agents. " +
-    "Supports Base, Ethereum, Solana, Arbitrum, Optimism, and Polygon.",
+    "Pay-per-call DexScreener-powered onchain market signal API for agents and trading bots. " +
+    "Returns token liquidity, volume, price impact estimates, pool activity, and market context.",
   pricing: {
     type: "fixed",
     currency: "USD",
@@ -330,7 +337,7 @@ export function createMarketSignalBazaarExtensions() {
         chain: "base",
         token: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
         timeframe: "1h",
-        data_source: "mock",
+        data_source: "dexscreener",
         summary:
           "liquidity at $1.2M; volume $450K (up 42.5% over the 1h window); estimated price impact moderate at ~0.8%; net wallet inflow observed.",
         signals: {
