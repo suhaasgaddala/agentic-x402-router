@@ -31,4 +31,18 @@ describe("mock provider", () => {
     expect(registry.getProviderForModel("claude-sonnet")).toBeInstanceOf(MockProvider);
     expect(registry.getProviderForModel("mock-fast")).toBeInstanceOf(MockProvider);
   });
+
+  it("provider selector stays mock-only even when an Anthropic key exists", () => {
+    const config = loadConfig({
+      NODE_ENV: "test",
+      X402_ENABLED: "false",
+      ANTHROPIC_API_KEY: "sk-test"
+    });
+    const registry = createProviderRegistry(config);
+
+    expect(registry.getProviderForModel("claude-haiku")).toBeInstanceOf(MockProvider);
+    expect(registry.getProviderForModel("claude-sonnet")).toBeInstanceOf(MockProvider);
+    expect(registry.getProviderForModel("claude-opus")).toBeInstanceOf(MockProvider);
+    expect(registry.getProviderForModel("mock-fast")).toBeInstanceOf(MockProvider);
+  });
 });

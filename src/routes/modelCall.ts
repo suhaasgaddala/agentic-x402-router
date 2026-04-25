@@ -6,7 +6,7 @@ import { getPriceForModel } from "../billing/pricing.js";
 import { formatUsdNumber } from "../billing/money.js";
 import { createProviderRegistry } from "../providers/index.js";
 import { createModelCallSchema } from "../schemas/modelCall.js";
-import { logger, previewPromptForLog } from "../telemetry/logger.js";
+import { logger } from "../telemetry/logger.js";
 import { createX402Middleware } from "../x402/middleware.js";
 
 export function createModelCallRouter(
@@ -66,8 +66,7 @@ export function createModelCallRouter(
           output_tokens: outputTokens,
           charged_usd: chargedUsd,
           estimated_provider_cost_usd: estimatedProviderCostUsd,
-          estimated_margin_usd: estimatedMarginUsd,
-          prompt_preview: previewPromptForLog(parsed.messages)
+          estimated_margin_usd: estimatedMarginUsd
         });
 
         res.status(200).json({

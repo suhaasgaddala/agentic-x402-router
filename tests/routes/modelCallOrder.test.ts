@@ -1,4 +1,6 @@
 import type { RequestHandler } from "express";
+import type { AddressInfo } from "node:net";
+import http from "node:http";
 import request from "supertest";
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../../src/config.js";
@@ -7,6 +9,46 @@ import { createModelCallRouter } from "../../src/routes/modelCall.js";
 import express from "express";
 import { requestIdMiddleware } from "../../src/telemetry/requestId.js";
 import { errorHandler } from "../../src/errors/errorHandler.js";
+
+async function withFakeFacilitator<T>(test: (url: string) => Promise<T>): Promise<T> {
+  const server = http.createServer((req, res) => {
+    if (req.url === "/supported") {
+      res.setHeader("content-type", "application/json");
+      res.end(
+        JSON.stringify({
+          kinds: [{ x402Version: 2, scheme: "exact", network: "eip155:84532" }],
+          extensions: [],
+          signers: {}
+        })
+      );
+      return;
+    }
+
+    res.statusCode = 404;
+    res.end("not found");
+  });
+
+  await new Promise<void>((resolve) => {
+    server.listen(0, "127.0.0.1", resolve);
+  });
+
+  const { port } = server.address() as AddressInfo;
+
+  try {
+    return await test(`http://127.0.0.1:${port}`);
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+
+        resolve();
+      });
+    });
+  }
+}
 
 describe("model-call route ordering", () => {
   it("runs payment middleware before JSON parsing and Zod validation", async () => {
@@ -56,5 +98,37 @@ describe("model-call route ordering", () => {
         expect(response.body.usage).toHaveProperty("estimated_provider_cost_usd");
         expect(response.body.usage).toHaveProperty("estimated_margin_usd");
       });
+  });
+
+  it("returns 402 before business validation for unpaid x402 requests", async () => {
+    await withFakeFacilitator(async (facilitatorUrl) => {
+      const app = createApp(
+        loadConfig({
+          NODE_ENV: "test",
+          X402_ENABLED: "true",
+          X402_PAY_TO: "0x0000000000000000000000000000000000000000",
+          X402_FACILITATOR_URL: facilitatorUrl
+        })
+      );
+
+      await request(app)
+        .post("/v1/model-call")
+        .set("Accept", "application/json")
+        .expect(402)
+        .expect((response) => {
+          expect(response.body.error.code).toBe("PAYMENT_REQUIRED");
+          expect(response.body.error.code).not.toBe("VALIDATION_ERROR");
+        });
+
+      await request(app)
+        .post("/v1/model-call")
+        .set("Accept", "application/json")
+        .send({})
+        .expect(402)
+        .expect((response) => {
+          expect(response.body.error.code).toBe("PAYMENT_REQUIRED");
+          expect(response.body.error.code).not.toBe("VALIDATION_ERROR");
+        });
+    });
   });
 });

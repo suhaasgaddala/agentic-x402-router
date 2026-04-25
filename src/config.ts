@@ -64,7 +64,9 @@ const envSchema = z.object({
   MAX_INPUT_CHARS: positiveIntegerFromEnv(50_000),
   MAX_OUTPUT_TOKENS: positiveIntegerFromEnv(2_000),
   JSON_BODY_LIMIT: z.string().trim().default("1mb"),
-  LOG_PROMPTS: booleanFromEnv
+
+  PRICE_MARKET_SIGNAL_USD: numberFromEnv(0.02).pipe(z.number().nonnegative()),
+  COST_MARKET_SIGNAL_PROVIDER_USD: numberFromEnv(0.005).pipe(z.number().nonnegative())
 });
 
 export type AppConfig = ReturnType<typeof loadConfig>;
@@ -101,7 +103,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     maxInputChars: value.MAX_INPUT_CHARS,
     maxOutputTokens: value.MAX_OUTPUT_TOKENS,
     jsonBodyLimit: value.JSON_BODY_LIMIT,
-    logPrompts: value.LOG_PROMPTS,
     x402: {
       enabled: value.X402_ENABLED,
       payTo: value.X402_PAY_TO,
@@ -113,7 +114,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
       serviceDescription: value.X402_SERVICE_DESCRIPTION
     },
     pricing: createPriceConfig(env),
-    cost: createCostConfig(env)
+    cost: createCostConfig(env),
+    marketSignal: {
+      priceUsd: value.PRICE_MARKET_SIGNAL_USD,
+      providerCostUsd: value.COST_MARKET_SIGNAL_PROVIDER_USD
+    }
   };
 }
 

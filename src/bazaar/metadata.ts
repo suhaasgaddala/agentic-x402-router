@@ -1,5 +1,13 @@
+// Keep all Bazaar x402 package coupling centralized in this metadata module.
+// Every endpoint's discovery metadata, input/output schemas, and Bazaar extension
+// factory functions live here so Bazaar-related changes have one place to land.
 import { declareDiscoveryExtension } from "@x402/extensions/bazaar";
 import type { ModelAlias } from "../providers/types.js";
+import {
+  SUPPORTED_CHAINS,
+  SUPPORTED_SIGNALS,
+  SUPPORTED_TIMEFRAMES
+} from "../schemas/marketSignal.js";
 
 export const bazaarTags = [
   "llm",
@@ -158,6 +166,188 @@ export function createBazaarExtensions() {
           estimated_margin_usd: 0.039458
         },
         timing: { latency_ms: 1234 }
+      }
+    }
+  });
+}
+
+// ─── Market Signal endpoint ────────────────────────────────────────────────
+
+export const marketSignalTags = [
+  "onchain data",
+  "trading",
+  "market data",
+  "token data",
+  "base",
+  "dex",
+  "liquidity",
+  "volume",
+  "price impact",
+  "wallet flows",
+  "trading bot",
+  "agent",
+  "x402",
+  "crypto",
+  "defi",
+  "market signals"
+] as const;
+
+export const marketSignalInputSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    chain: {
+      type: "string",
+      enum: [...SUPPORTED_CHAINS],
+      default: "base"
+    },
+    token: {
+      type: "string",
+      description: "EVM address (0x + 40 hex chars) or Solana pubkey (32–44 base58 chars)"
+    },
+    timeframe: {
+      type: "string",
+      enum: [...SUPPORTED_TIMEFRAMES],
+      default: "1h"
+    },
+    signals: {
+      type: "array",
+      minItems: 1,
+      maxItems: 6,
+      items: { type: "string", enum: [...SUPPORTED_SIGNALS] }
+    },
+    pool: {
+      type: "string",
+      description: "Optional specific DEX pool address (same format as token)"
+    },
+    metadata: { type: "object", additionalProperties: true }
+  },
+  required: ["token", "signals"]
+} as const;
+
+export const marketSignalOutputSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    ok: { type: "boolean", const: true },
+    id: { type: "string" },
+    chain: { type: "string" },
+    token: { type: "string" },
+    timeframe: { type: "string" },
+    data_source: { type: "string" },
+    summary: { type: "string" },
+    signals: {
+      type: "object",
+      properties: {
+        liquidity_usd: { type: ["number", "null"] },
+        volume_usd: { type: ["number", "null"] },
+        volume_change_pct: { type: ["number", "null"] },
+        price_change_pct: { type: ["number", "null"] },
+        price_impact_estimate_pct: { type: ["number", "null"] },
+        pool_activity: { type: ["string", "null"], enum: ["low", "moderate", "elevated", "high", null] },
+        wallet_flow: { type: ["string", "null"], enum: ["net_inflow", "net_outflow", "neutral", null] }
+      }
+    },
+    usage: {
+      type: "object",
+      properties: {
+        charged_usd: { type: "number" },
+        estimated_provider_cost_usd: { type: "number" },
+        estimated_margin_usd: { type: "number" }
+      },
+      required: ["charged_usd", "estimated_provider_cost_usd", "estimated_margin_usd"]
+    },
+    timing: {
+      type: "object",
+      properties: { latency_ms: { type: "number" } },
+      required: ["latency_ms"]
+    },
+    disclaimer: { type: "string" }
+  },
+  required: [
+    "ok",
+    "id",
+    "chain",
+    "token",
+    "timeframe",
+    "data_source",
+    "summary",
+    "signals",
+    "usage",
+    "timing",
+    "disclaimer"
+  ]
+} as const;
+
+export const marketSignalMetadata = {
+  serviceName: "x402 Onchain Market Signals",
+  route: "POST /v1/market-signal",
+  category: "market-data",
+  mimeType: "application/json",
+  tags: marketSignalTags,
+  description:
+    "Pay-per-call onchain market data and market signal endpoint for agents and trading bots. " +
+    "Returns token liquidity, volume changes, price movement, pool activity, estimated price impact, " +
+    "wallet flow context, and plain-English market summaries for autonomous agents. " +
+    "Supports Base, Ethereum, Solana, Arbitrum, Optimism, and Polygon.",
+  pricing: {
+    type: "fixed",
+    currency: "USD",
+    unit: "call"
+  },
+  examples: [
+    {
+      name: "base-token-1h",
+      input: {
+        chain: "base",
+        token: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        timeframe: "1h",
+        signals: ["liquidity", "volume", "price_impact", "wallet_flows"]
+      }
+    },
+    {
+      name: "ethereum-full-24h",
+      input: {
+        chain: "ethereum",
+        token: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        timeframe: "24h",
+        signals: ["liquidity", "volume", "price_change", "price_impact", "pool_activity", "wallet_flows"]
+      }
+    }
+  ]
+} as const;
+
+export function createMarketSignalBazaarExtensions() {
+  return declareDiscoveryExtension({
+    bodyType: "json",
+    input: marketSignalMetadata.examples[0].input,
+    inputSchema: marketSignalInputSchema,
+    output: {
+      schema: marketSignalOutputSchema,
+      example: {
+        ok: true,
+        id: "req_example",
+        chain: "base",
+        token: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+        timeframe: "1h",
+        data_source: "mock",
+        summary:
+          "liquidity at $1.2M; volume $450K (up 42.5% over the 1h window); estimated price impact moderate at ~0.8%; net wallet inflow observed.",
+        signals: {
+          liquidity_usd: 1200000,
+          volume_usd: 450000,
+          volume_change_pct: 42.5,
+          price_impact_estimate_pct: 0.8,
+          wallet_flow: "net_inflow"
+        },
+        usage: {
+          charged_usd: 0.02,
+          estimated_provider_cost_usd: 0.005,
+          estimated_margin_usd: 0.015
+        },
+        timing: { latency_ms: 12 },
+        disclaimer:
+          "Market signals are informational only and do not constitute financial advice."
       }
     }
   });

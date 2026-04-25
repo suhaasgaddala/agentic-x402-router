@@ -14,14 +14,3 @@ export const logger = pino({
     remove: true
   }
 });
-
-export function previewPromptForLog(messages: Array<{ content: string }>): string | undefined {
-  if (!config.logPrompts) {
-    return undefined;
-  }
-
-  return messages
-    .map((message) => message.content)
-    .join("\n")
-    .slice(0, 500);
-}

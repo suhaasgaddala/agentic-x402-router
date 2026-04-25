@@ -118,28 +118,91 @@ X402_RESOURCE_BASE_URL=https://your-public-host.example
 
 The x402 middleware is mounted before route-local JSON parsing and Zod validation. An unpaid request with no body or an invalid business body should return `402 Payment Required`, not a model-call validation error.
 
+## Market Signal Endpoint
+
+`POST /v1/market-signal` is a second paid endpoint for onchain token market data, designed for trading bots and autonomous agents.
+
+### Supported inputs
+
+| Field | Values | Default |
+|---|---|---|
+| `chain` | `base`, `ethereum`, `solana`, `arbitrum`, `optimism`, `polygon` | `base` |
+| `timeframe` | `5m`, `15m`, `1h`, `4h`, `24h` | `1h` |
+| `signals` | `liquidity`, `volume`, `price_change`, `price_impact`, `pool_activity`, `wallet_flows` | required |
+| `token` | EVM `0x…` address or Solana pubkey | required |
+| `pool` | Optional specific DEX pool address | — |
+
+Only requested signals are included in the response. Unrequested fields are absent.
+
+### Local mock mode
+
+```bash
+curl -sS -X POST http://localhost:3000/v1/market-signal \
+  -H "content-type: application/json" \
+  --data @examples/market-signal.json
+```
+
+Response includes `data_source: "mock"` and a fixed disclaimer. Values are deterministic for the same `chain + token + timeframe` combination.
+
+### x402-enabled unpaid check
+
+With `X402_ENABLED=true` and valid env:
+
+```bash
+# no body — should return 402, not 400
+curl -i -X POST http://localhost:3000/v1/market-signal
+
+# invalid body — should return 402, not 400
+curl -i -X POST http://localhost:3000/v1/market-signal \
+  -H "content-type: application/json" \
+  --data '{}'
+```
+
+### Pricing
+
+- `PRICE_MARKET_SIGNAL_USD=0.02` — charged to the caller per call
+- `COST_MARKET_SIGNAL_PROVIDER_USD=0.005` — estimated upstream data cost
+
+### Disclaimer
+
+Every successful response includes:
+
+```
+"disclaimer": "Market signals are informational only and do not constitute financial advice."
+```
+
+This field is always present in every 200 response. The summary field contains observational language only — no buy, sell, bullish, bearish, or directional recommendations.
+
 ## Bazaar Discovery
 
-Discovery metadata is centralized in `src/bazaar/metadata.ts` and wired into the x402 route config with `declareDiscoveryExtension` from `@x402/extensions/bazaar`. It describes the endpoint as an x402-paid model gateway for LLM inference, model access, text generation, summarization, code, reasoning, and agent tools.
+Discovery metadata is centralized in `src/bazaar/metadata.ts` and wired into the x402 route config with `declareDiscoveryExtension` from `@x402/extensions/bazaar`. Both endpoints have their own metadata, tags, input/output schemas, and Bazaar extension factories in that file.
 
 ## Manual Unpaid 402 Checklist
 
 Start the server with valid x402 env and `X402_ENABLED=true`, then run:
 
 ```bash
+# Model call — should 402
 curl -i -X POST http://localhost:3000/v1/model-call
 curl -i -X POST http://localhost:3000/v1/model-call \
   -H "content-type: application/json" \
   --data '{}'
+
+# Market signal — should 402
+curl -i -X POST http://localhost:3000/v1/market-signal
+curl -i -X POST http://localhost:3000/v1/market-signal \
+  -H "content-type: application/json" \
+  --data '{}'
+
+# Free routes — should 200
 curl -i http://localhost:3000/health
 curl -i http://localhost:3000/v1/models
 ```
 
 Expected:
 
-- The two unpaid `POST /v1/model-call` requests return `402`, not `400`.
-- `GET /health` returns `200`.
-- `GET /v1/models` returns `200`.
+- Unpaid `POST /v1/model-call` and `POST /v1/market-signal` return `402`, not `400`.
+- `GET /health` and `GET /v1/models` return `200`.
 
 ## Scripts
 
@@ -152,7 +215,7 @@ npm run build
 
 ## Pricing
 
-The gateway uses fixed per-call prices:
+Model call prices (per call):
 
 - `PRICE_CLAUDE_HAIKU_USD=0.02`
 - `PRICE_CLAUDE_SONNET_USD=0.05`
@@ -161,11 +224,15 @@ The gateway uses fixed per-call prices:
 
 Provider cost estimates are configurable with the `COST_*_PER_MTOK_USD` env vars in `.env.example`.
 
+Market signal prices (per call):
+
+- `PRICE_MARKET_SIGNAL_USD=0.02`
+- `COST_MARKET_SIGNAL_PROVIDER_USD=0.005`
+
 ## Safety Notes
 
-- Raw prompts are not logged by default.
-- `LOG_PROMPTS=true` logs only a short preview, never the full payload.
-- No provider secrets are required or logged in phase 1.
+- Raw prompts and message content are not logged, even partially.
+- No provider secrets are required or logged in phase 2.
 - This service is intended for legitimate paid inference calls. Do not use it to simulate buyers, manipulate marketplace ranking, generate fake traffic, or automate self-calling loops.
 
 ## Next Provider Phase
