@@ -1,20 +1,49 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
 import { paymentMiddleware, x402ResourceServer } from "@x402/express";
 import { HTTPFacilitatorClient } from "@x402/core/server";
+import type { FacilitatorConfig } from "@x402/core/server";
 import { ExactEvmScheme } from "@x402/evm/exact/server";
 import { bazaarResourceServerExtension } from "@x402/extensions/bazaar";
+import { createFacilitatorConfig } from "@coinbase/x402";
 import type { AppConfig } from "../config.js";
 import { logger } from "../telemetry/logger.js";
-import { createX402RoutesConfig, normalizeX402Network } from "./config.js";
+import {
+  createX402RoutesConfig,
+  getX402FacilitatorMode,
+  normalizeCdpApiKeySecret,
+  normalizeX402Network
+} from "./config.js";
+
+type CoinbaseFacilitatorConfigFactory = (
+  apiKeyId?: string,
+  apiKeySecret?: string
+) => FacilitatorConfig;
+
+export function createFacilitatorClient(
+  config: AppConfig,
+  coinbaseFacilitatorConfigFactory: CoinbaseFacilitatorConfigFactory = createFacilitatorConfig
+): HTTPFacilitatorClient {
+  if (getX402FacilitatorMode(config) === "cdp") {
+    const cdpConfig = coinbaseFacilitatorConfigFactory(
+      config.x402.cdp.apiKeyId,
+      config.x402.cdp.apiKeySecret
+        ? normalizeCdpApiKeySecret(config.x402.cdp.apiKeySecret)
+        : undefined
+    );
+    return new HTTPFacilitatorClient(cdpConfig);
+  }
+
+  return new HTTPFacilitatorClient({
+    url: config.x402.facilitatorUrl
+  });
+}
 
 export function createX402Middleware(config: AppConfig): RequestHandler {
   if (!config.x402.enabled) {
     return (_req: Request, _res: Response, next: NextFunction) => next();
   }
 
-  const facilitatorClient = new HTTPFacilitatorClient({
-    url: config.x402.facilitatorUrl
-  });
+  const facilitatorClient = createFacilitatorClient(config);
   const network = normalizeX402Network(config.x402.network);
   const resourceServer = new x402ResourceServer(facilitatorClient)
     .register(network, new ExactEvmScheme())

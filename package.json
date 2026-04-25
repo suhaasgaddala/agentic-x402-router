@@ -9,7 +9,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "buyer:market-signal": "tsx examples/buyer-market-signal.ts"
   },
   "keywords": [
     "x402",
@@ -20,10 +21,12 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@coinbase/x402": "^2.1.0",
     "@x402/core": "^2.10.0",
     "@x402/evm": "^2.10.0",
     "@x402/express": "^2.10.0",
     "@x402/extensions": "^2.10.0",
+    "@x402/fetch": "^2.10.0",
     "dotenv": "^16.4.7",
     "express": "^5.1.0",
     "pino": "^9.6.0",

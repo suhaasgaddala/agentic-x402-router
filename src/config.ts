@@ -2,6 +2,7 @@ import "dotenv/config";
 import { z } from "zod";
 import { createCostConfig } from "./billing/cost.js";
 import { createPriceConfig } from "./billing/pricing.js";
+import { isCdpFacilitatorUrl } from "./x402/config.js";
 
 const optionalNonEmptyString = z
   .string()
@@ -63,6 +64,8 @@ const envSchema = z.object({
     .string()
     .trim()
     .default("x402-paid model gateway for agent-discoverable LLM inference"),
+  CDP_API_KEY_ID: optionalNonEmptyString,
+  CDP_API_KEY_SECRET: optionalNonEmptyString,
 
   ANTHROPIC_API_KEY: optionalNonEmptyString,
 
@@ -100,6 +103,21 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     if (missing.length > 0) {
       throw new Error(`X402_ENABLED=true requires: ${missing.join(", ")}`);
     }
+
+    if (isCdpFacilitatorUrl(value.X402_FACILITATOR_URL)) {
+      const missingCdp = [
+        ["CDP_API_KEY_ID", value.CDP_API_KEY_ID],
+        ["CDP_API_KEY_SECRET", value.CDP_API_KEY_SECRET]
+      ]
+        .filter(([, envValue]) => !envValue)
+        .map(([name]) => name);
+
+      if (missingCdp.length > 0) {
+        throw new Error(
+          `CDP facilitator requires CDP_API_KEY_ID and CDP_API_KEY_SECRET. Missing: ${missingCdp.join(", ")}`
+        );
+      }
+    }
   }
 
   return {
@@ -120,7 +138,11 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
       defaultPriceUsd: value.X402_DEFAULT_PRICE_USD,
       resourceBaseUrl: value.X402_RESOURCE_BASE_URL ?? value.PUBLIC_BASE_URL,
       serviceName: value.X402_SERVICE_NAME,
-      serviceDescription: value.X402_SERVICE_DESCRIPTION
+      serviceDescription: value.X402_SERVICE_DESCRIPTION,
+      cdp: {
+        apiKeyId: value.CDP_API_KEY_ID,
+        apiKeySecret: value.CDP_API_KEY_SECRET
+      }
     },
     pricing: createPriceConfig(env),
     cost: createCostConfig(env),

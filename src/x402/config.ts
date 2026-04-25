@@ -10,6 +10,29 @@ import { getPriceForModel } from "../billing/pricing.js";
 export const MODEL_CALL_ROUTE_KEY = "POST /v1/model-call";
 export const MARKET_SIGNAL_ROUTE_KEY = "POST /v1/market-signal";
 
+export type X402FacilitatorMode = "url" | "cdp";
+
+export function isCdpFacilitatorUrl(url: string | undefined): boolean {
+  if (!url) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname === "api.cdp.coinbase.com" && parsed.pathname.includes("/x402");
+  } catch {
+    return false;
+  }
+}
+
+export function normalizeCdpApiKeySecret(secret: string): string {
+  return secret.replace(/\\n/g, "\n");
+}
+
+export function getX402FacilitatorMode(config: AppConfig): X402FacilitatorMode {
+  return isCdpFacilitatorUrl(config.x402.facilitatorUrl) ? "cdp" : "url";
+}
+
 export function normalizeX402Network(network: string): `${string}:${string}` {
   const normalized = network.trim();
   if (normalized === "base-sepolia") {

@@ -103,7 +103,7 @@ When `X402_ENABLED=false`, local calls work without payment and return a normali
 
 ## x402-Enabled Mode
 
-Set:
+x402.org unauthenticated facilitator mode:
 
 ```bash
 X402_ENABLED=true
@@ -113,6 +113,38 @@ X402_FACILITATOR_URL=https://x402.org/facilitator
 X402_DEFAULT_PRICE_USD=0.05
 X402_RESOURCE_BASE_URL=https://your-public-host.example
 ```
+
+This mode does not require CDP keys and is useful for testnet checks.
+
+Coinbase CDP authenticated facilitator mode:
+
+```bash
+X402_ENABLED=true
+X402_PAY_TO=0xYourWalletAddress
+X402_NETWORK=base
+X402_FACILITATOR_URL=https://api.cdp.coinbase.com/platform/v2/x402
+X402_DEFAULT_PRICE_USD=0.05
+X402_RESOURCE_BASE_URL=https://your-public-host.example
+CDP_API_KEY_ID=your-cdp-api-key-id
+CDP_API_KEY_SECRET=your-cdp-api-key-secret
+```
+
+CDP mode requires both `CDP_API_KEY_ID` and `CDP_API_KEY_SECRET`. If the CDP secret is a PEM-style value in Railway or another hosted env system, paste it as one variable with escaped `\n` sequences; the app normalizes those escaped newlines before creating the facilitator client. Never commit CDP keys and never print them in logs.
+
+### Railway CDP env checklist
+
+Set these Railway variables:
+
+- `NODE_ENV=production`
+- `PORT` from Railway, or omit and let Railway inject it
+- `PUBLIC_BASE_URL=https://<your-railway-domain>`
+- `X402_ENABLED=true`
+- `X402_PAY_TO=0xYourWalletAddress`
+- `X402_NETWORK=base` or `base-sepolia`
+- `X402_FACILITATOR_URL=https://api.cdp.coinbase.com/platform/v2/x402`
+- `X402_RESOURCE_BASE_URL=https://<your-railway-domain>`
+- `CDP_API_KEY_ID`
+- `CDP_API_KEY_SECRET`
 
 `POST /v1/model-call` is protected by x402. The route uses one fixed v1 price per call from `X402_DEFAULT_PRICE_USD`. Provider execution is still mock-mode until a real provider is added.
 
@@ -191,6 +223,76 @@ Every successful response includes:
 ```
 
 This field is always present in every 200 response. The summary field contains observational language only and does not provide recommendations or projected outcomes.
+
+## Buyer Script: Real Paid x402 Request
+
+`examples/buyer-market-signal.ts` sends a real x402-paid `POST /v1/market-signal` request against the Railway production endpoint using a local burner wallet.
+
+### Burner wallet setup
+
+1. **Generate a fresh Base Sepolia burner wallet** — use any EVM wallet tool (e.g. Coinbase Wallet, MetaMask, or `cast wallet new` from Foundry). This wallet should hold testnet funds only.
+
+2. **Fund it with Base Sepolia USDC** — the x402 `exact` scheme charges a small USDC amount per call. Get testnet USDC from the [Coinbase Developer Faucet](https://faucet.circle.com/) or the [Base Sepolia bridge](https://bridge.base.org/). You also need a small amount of Base Sepolia ETH for gas.
+
+   You do not need mainnet assets. Never use a mainnet private key here.
+
+3. **Add the private key to `.env`** (not `.env.example`):
+
+   ```bash
+   EVM_PRIVATE_KEY=0x<your-burner-private-key>
+   ```
+
+   The key is read from `.env` at runtime and never logged. Confirm `.env` is in `.gitignore` before adding real keys.
+
+4. **Optionally override the target URL** (defaults to Railway production):
+
+   ```bash
+   PAID_ENDPOINT_URL=https://agentic-x402-router-production.up.railway.app/v1/market-signal
+   ```
+
+### Run the buyer script
+
+```bash
+npm run buyer:market-signal
+```
+
+The script will:
+
+1. Load `EVM_PRIVATE_KEY` from `.env` and exit clearly if it is missing.
+2. Create a viem WalletClient for Base Sepolia from the private key.
+3. Wrap `fetch` with x402 payment handling via `wrapFetchWithPayment` from `@x402/fetch`.
+4. POST the request body, automatically intercept the `402`, sign the USDC payment, and retry.
+5. Print the response status, any `X-Payment-Response` settlement header, and the full response JSON.
+
+Example output:
+
+```
+=== x402 Market Signal Buyer ===
+Endpoint : https://agentic-x402-router-production.up.railway.app/v1/market-signal
+Wallet   : 0xYourBurnerAddress
+Network  : Base Sepolia (eip155:84532)
+Body     : {"token":"0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913","signals":["liquidity","volume","price_impact","wallet_flows"]}
+
+Status: 200 OK
+X-Payment-Response: <base64-encoded-settlement>
+
+Response:
+{
+  "ok": true,
+  "id": "req_...",
+  "chain": "base",
+  "token": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+  ...
+  "disclaimer": "Market signals are informational only and do not constitute financial advice."
+}
+```
+
+### Security reminders
+
+- `.env` is `.gitignore`-listed — confirm this before committing.
+- Never put a real private key in `.env.example`.
+- Use only Base Sepolia testnet keys and funds with this script.
+- The private key is never printed, logged, or transmitted to the server.
 
 ## Bazaar Discovery
 

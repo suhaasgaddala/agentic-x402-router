@@ -5,7 +5,10 @@ import {
   MODEL_CALL_ROUTE_KEY,
   createX402RoutesConfig,
   formatX402UsdPrice,
+  getX402FacilitatorMode,
   getModelCallResourceUrl,
+  isCdpFacilitatorUrl,
+  normalizeCdpApiKeySecret,
   normalizeX402Network
 } from "../../src/x402/config.js";
 
@@ -35,6 +38,43 @@ describe("x402 config", () => {
     });
 
     expect(config.x402.enabled).toBe(true);
+    expect(getX402FacilitatorMode(config)).toBe("url");
+  });
+
+  it("detects CDP facilitator URLs", () => {
+    expect(isCdpFacilitatorUrl("https://api.cdp.coinbase.com/platform/v2/x402")).toBe(true);
+    expect(isCdpFacilitatorUrl("https://x402.org/facilitator")).toBe(false);
+  });
+
+  it("requires CDP keys for CDP facilitator mode", () => {
+    expect(() =>
+      loadConfig({
+        NODE_ENV: "test",
+        X402_ENABLED: "true",
+        X402_PAY_TO: "0x0000000000000000000000000000000000000000",
+        X402_FACILITATOR_URL: "https://api.cdp.coinbase.com/platform/v2/x402"
+      })
+    ).toThrow(/CDP facilitator requires CDP_API_KEY_ID and CDP_API_KEY_SECRET/);
+  });
+
+  it("allows CDP facilitator mode with CDP keys", () => {
+    const config = loadConfig({
+      NODE_ENV: "test",
+      X402_ENABLED: "true",
+      X402_PAY_TO: "0x0000000000000000000000000000000000000000",
+      X402_FACILITATOR_URL: "https://api.cdp.coinbase.com/platform/v2/x402",
+      CDP_API_KEY_ID: "key-id",
+      CDP_API_KEY_SECRET: "key-secret"
+    });
+
+    expect(getX402FacilitatorMode(config)).toBe("cdp");
+    expect(config.x402.cdp.apiKeyId).toBe("key-id");
+  });
+
+  it("normalizes escaped newline sequences in CDP API key secrets", () => {
+    expect(normalizeCdpApiKeySecret("-----BEGIN-----\\nabc\\n-----END-----")).toBe(
+      "-----BEGIN-----\nabc\n-----END-----"
+    );
   });
 
   it("builds model call route config with bazaar extension", () => {
