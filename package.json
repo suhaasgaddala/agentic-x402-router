@@ -10,7 +10,8 @@
     "start": "node dist/server.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "buyer:market-signal": "tsx examples/buyer-market-signal.ts"
+    "buyer:market-signal": "tsx examples/buyer-market-signal.ts",
+    "buyer:model-call": "tsx examples/buyer-model-call.ts"
   },
   "keywords": [
     "x402",
@@ -21,6 +22,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.91.1",
     "@coinbase/x402": "^2.1.0",
     "@x402/core": "^2.10.0",
     "@x402/evm": "^2.10.0",

@@ -32,4 +32,13 @@ describe("cost estimation", () => {
   it("calculates margin", () => {
     expect(estimateMarginUsd(0.05, 0.010542)).toBe(0.039458);
   });
+
+  it("uses current Opus cost defaults", () => {
+    const config = createCostConfig({});
+
+    expect(config.perMillionTokensUsd["claude-opus"]).toEqual({
+      input: 5,
+      output: 25
+    });
+  });
 });

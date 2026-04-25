@@ -57,7 +57,7 @@ const envSchema = z.object({
   X402_PAY_TO: optionalNonEmptyString,
   X402_NETWORK: z.string().trim().default("base-sepolia"),
   X402_FACILITATOR_URL: optionalNonEmptyString,
-  X402_DEFAULT_PRICE_USD: numberFromEnv(0.05).pipe(z.number().nonnegative()),
+  X402_DEFAULT_PRICE_USD: numberFromEnv(0.04).pipe(z.number().nonnegative()),
   X402_RESOURCE_BASE_URL: optionalNonEmptyString,
   X402_SERVICE_NAME: z.string().trim().default("x402-model-gateway"),
   X402_SERVICE_DESCRIPTION: z
@@ -71,6 +71,10 @@ const envSchema = z.object({
   CDP_API_KEY_SECRET_B64: optionalNonEmptyString,
 
   ANTHROPIC_API_KEY: optionalNonEmptyString,
+  ANTHROPIC_HAIKU_MODEL: z.string().trim().default("claude-haiku-4-5"),
+  ANTHROPIC_SONNET_MODEL: z.string().trim().default("claude-sonnet-4-6"),
+  ANTHROPIC_OPUS_MODEL: z.string().trim().default("claude-opus-4-7"),
+  MODEL_PROVIDER_TIMEOUT_MS: positiveIntegerFromEnv(60_000),
 
   MAX_INPUT_CHARS: positiveIntegerFromEnv(50_000),
   MAX_OUTPUT_TOKENS: positiveIntegerFromEnv(2_000),
@@ -135,7 +139,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     port: value.PORT,
     publicBaseUrl: value.PUBLIC_BASE_URL,
     anthropic: {
-      apiKey: value.ANTHROPIC_API_KEY
+      apiKey: value.ANTHROPIC_API_KEY,
+      models: {
+        "claude-haiku": value.ANTHROPIC_HAIKU_MODEL,
+        "claude-sonnet": value.ANTHROPIC_SONNET_MODEL,
+        "claude-opus": value.ANTHROPIC_OPUS_MODEL
+      },
+      timeoutMs: value.MODEL_PROVIDER_TIMEOUT_MS
     },
     maxInputChars: value.MAX_INPUT_CHARS,
     maxOutputTokens: value.MAX_OUTPUT_TOKENS,

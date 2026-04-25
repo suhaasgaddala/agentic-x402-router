@@ -8,8 +8,19 @@ export const logger = pino({
       "req.headers.authorization",
       "req.headers.x-payment",
       "req.headers.x-payment-response",
+      "req.headers.cookie",
+      "req.headers['x-api-key']",
       "*.apiKey",
-      "*.ANTHROPIC_API_KEY"
+      "*.api_key",
+      "*.apiKeyId",
+      "*.apiKeySecret",
+      "*.privateKey",
+      "*.secret",
+      "*.ANTHROPIC_API_KEY",
+      "*.CDP_API_KEY_ID",
+      "*.CDP_API_KEY_SECRET",
+      "*.CDP_API_KEY_SECRET_B64",
+      "*.EVM_PRIVATE_KEY"
     ],
     remove: true
   }

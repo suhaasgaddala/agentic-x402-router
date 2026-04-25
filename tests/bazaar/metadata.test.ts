@@ -19,17 +19,44 @@ describe("bazaar metadata", () => {
       expect.arrayContaining([
         "llm",
         "inference",
+        "llm inference",
         "model access",
+        "model call",
+        "model-call",
         "claude",
         "anthropic",
         "chat completion",
         "text generation",
         "summarization",
         "code",
+        "coding",
         "reasoning",
-        "agent tools"
+        "agent tools",
+        "cheap claude",
+        "x402"
       ])
     );
+  });
+
+  it("model-call output example uses Anthropic provider", () => {
+    const ext = createBazaarExtensions();
+    type BazaarShape = { bazaar: { info: { output: { example: { provider?: string } } } } };
+    const example = (ext as unknown as BazaarShape).bazaar.info.output.example;
+
+    expect(example.provider).toBe("anthropic");
+  });
+
+  it("model-call metadata avoids official API positioning and secret-like values", () => {
+    const text = JSON.stringify({
+      tags: bazaarTags,
+      description: bazaarMetadata.description,
+      examples: bazaarMetadata.examples
+    }).toLowerCase();
+
+    expect(text).not.toContain("official claude");
+    expect(text).not.toContain("official anthropic");
+    expect(text).not.toContain("sk-ant");
+    expect(text).not.toContain("api key");
   });
 
   it("includes model list and examples", () => {

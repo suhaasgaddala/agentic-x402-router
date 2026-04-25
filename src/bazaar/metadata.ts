@@ -12,15 +12,20 @@ import {
 export const bazaarTags = [
   "llm",
   "inference",
+  "llm inference",
   "model access",
+  "model call",
+  "model-call",
   "claude",
   "anthropic",
   "chat completion",
   "text generation",
   "summarization",
   "code",
+  "coding",
   "reasoning",
   "agent tools",
+  "cheap claude",
   "x402"
 ] as const;
 
@@ -104,7 +109,7 @@ export const bazaarMetadata = {
   mimeType: "application/json",
   tags: bazaarTags,
   description:
-    "Pay-per-call x402 model gateway for agent-accessible LLM inference. Supports Claude-oriented chat/text generation aliases through a simple JSON messages API. Useful for summarization, coding help, planning, reasoning, extraction, and general text generation.",
+    "Pay-per-call x402 model gateway for agent-accessible Claude-backed LLM inference. Supports Anthropic-backed Claude aliases through a simple JSON messages API. Useful for chat completion, text generation, summarization, coding help, planning, reasoning, extraction, and cheap Claude model access through x402.",
   models: bazaarModelAliases,
   pricing: {
     type: "fixed",
@@ -156,7 +161,7 @@ export function createBazaarExtensions() {
         ok: true,
         id: "req_example",
         model: "claude-sonnet",
-        provider: "mock",
+        provider: "anthropic",
         text: "Concise model output appears here.",
         usage: {
           input_tokens: 1234,

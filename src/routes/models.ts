@@ -13,17 +13,17 @@ const modelInfo: ModelInfo[] = [
   {
     id: "claude-haiku",
     provider: "anthropic",
-    description: "Fast Claude-family model alias. In phase 1 this resolves to the local mock provider."
+    description: "Fast Claude-family model alias. Uses Anthropic when configured, otherwise mock fallback."
   },
   {
     id: "claude-sonnet",
     provider: "anthropic",
-    description: "Balanced Claude-family model alias. In phase 1 this resolves to the local mock provider."
+    description: "Balanced Claude-family model alias. Uses Anthropic when configured, otherwise mock fallback."
   },
   {
     id: "claude-opus",
     provider: "anthropic",
-    description: "High-capability Claude-family model alias. In phase 1 this resolves to the local mock provider."
+    description: "High-capability Claude-family model alias. Uses Anthropic when configured, otherwise mock fallback."
   },
   {
     id: "mock-fast",

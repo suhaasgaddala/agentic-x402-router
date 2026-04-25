@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadConfig } from "../../src/config.js";
+import { AnthropicProvider } from "../../src/providers/anthropic.js";
 import { createProviderRegistry } from "../../src/providers/index.js";
 import { MockProvider } from "../../src/providers/mock.js";
 
@@ -32,7 +33,7 @@ describe("mock provider", () => {
     expect(registry.getProviderForModel("mock-fast")).toBeInstanceOf(MockProvider);
   });
 
-  it("provider selector stays mock-only even when an Anthropic key exists", () => {
+  it("provider selector uses Anthropic for Claude aliases when an Anthropic key exists", () => {
     const config = loadConfig({
       NODE_ENV: "test",
       X402_ENABLED: "false",
@@ -40,9 +41,9 @@ describe("mock provider", () => {
     });
     const registry = createProviderRegistry(config);
 
-    expect(registry.getProviderForModel("claude-haiku")).toBeInstanceOf(MockProvider);
-    expect(registry.getProviderForModel("claude-sonnet")).toBeInstanceOf(MockProvider);
-    expect(registry.getProviderForModel("claude-opus")).toBeInstanceOf(MockProvider);
+    expect(registry.getProviderForModel("claude-haiku")).toBeInstanceOf(AnthropicProvider);
+    expect(registry.getProviderForModel("claude-sonnet")).toBeInstanceOf(AnthropicProvider);
+    expect(registry.getProviderForModel("claude-opus")).toBeInstanceOf(AnthropicProvider);
     expect(registry.getProviderForModel("mock-fast")).toBeInstanceOf(MockProvider);
   });
 });

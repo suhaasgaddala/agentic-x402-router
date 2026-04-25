@@ -6,7 +6,7 @@ describe("pricing", () => {
     const config = createPriceConfig({});
 
     expect(getPriceForModel("claude-haiku", config)).toBe(0.02);
-    expect(getPriceForModel("claude-sonnet", config)).toBe(0.05);
+    expect(getPriceForModel("claude-sonnet", config)).toBe(0.04);
     expect(getPriceForModel("claude-opus", config)).toBe(0.2);
     expect(getPriceForModel("mock-fast", config)).toBe(0.001);
   });

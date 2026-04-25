@@ -7,6 +7,7 @@ import { formatUsdNumber } from "../billing/money.js";
 import { createProviderRegistry } from "../providers/index.js";
 import { createModelCallSchema } from "../schemas/modelCall.js";
 import { logger } from "../telemetry/logger.js";
+import { getFixedX402PriceUsd } from "../x402/config.js";
 import { createX402Middleware } from "../x402/middleware.js";
 
 export function createModelCallRouter(
@@ -41,7 +42,9 @@ export function createModelCallRouter(
         const inputText = parsed.messages.map((message) => message.content).join("\n");
         const inputTokens = result.usage.inputTokens ?? estimateTokensFromText(inputText);
         const outputTokens = result.usage.outputTokens ?? estimateTokensFromText(result.text);
-        const chargedUsd = getPriceForModel(parsed.model, config.pricing);
+        const chargedUsd = config.x402.enabled
+          ? getFixedX402PriceUsd(config)
+          : getPriceForModel(parsed.model, config.pricing);
         const estimatedProviderCostUsd = estimateProviderCostUsd(
           parsed.model,
           {

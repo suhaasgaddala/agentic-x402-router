@@ -41,6 +41,17 @@ describe("x402 config", () => {
     expect(getX402FacilitatorMode(config)).toBe("url");
   });
 
+  it("sets current Anthropic model defaults and provider timeout", () => {
+    const config = loadConfig({ NODE_ENV: "test" });
+
+    expect(config.anthropic.models).toEqual({
+      "claude-haiku": "claude-haiku-4-5",
+      "claude-sonnet": "claude-sonnet-4-6",
+      "claude-opus": "claude-opus-4-7"
+    });
+    expect(config.anthropic.timeoutMs).toBe(60_000);
+  });
+
   it("detects CDP facilitator URLs", () => {
     expect(isCdpFacilitatorUrl("https://api.cdp.coinbase.com/platform/v2/x402")).toBe(true);
     expect(isCdpFacilitatorUrl("https://x402.org/facilitator")).toBe(false);
@@ -143,7 +154,10 @@ describe("x402 config", () => {
     expect(getModelCallResourceUrl(config)).toBe("https://gateway.example/v1/model-call");
     expect(route).toMatchObject({
       resource: "https://gateway.example/v1/model-call",
-      mimeType: "application/json"
+      mimeType: "application/json",
+      accepts: expect.objectContaining({
+        price: "$0.040000"
+      })
     });
     expect(route.extensions).toHaveProperty("bazaar");
     expect(route.unpaidResponseBody?.({} as never)).toEqual({

@@ -30,8 +30,8 @@ export function createCostConfig(env: NodeJS.ProcessEnv = process.env): CostConf
         output: parseUsdEnv(env.COST_CLAUDE_SONNET_OUTPUT_PER_MTOK_USD, 15)
       },
       "claude-opus": {
-        input: parseUsdEnv(env.COST_CLAUDE_OPUS_INPUT_PER_MTOK_USD, 15),
-        output: parseUsdEnv(env.COST_CLAUDE_OPUS_OUTPUT_PER_MTOK_USD, 75)
+        input: parseUsdEnv(env.COST_CLAUDE_OPUS_INPUT_PER_MTOK_USD, 5),
+        output: parseUsdEnv(env.COST_CLAUDE_OPUS_OUTPUT_PER_MTOK_USD, 25)
       }
     }
   };

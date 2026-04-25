@@ -1,14 +1,14 @@
 # agentic-x402-router
 
-Phase 1 MVP for an **x402-paid model gateway**: a paid inference endpoint shaped for agent-discoverable LLM inference.
+An **x402-paid model gateway**: a paid inference endpoint shaped for agent-discoverable LLM inference.
 
-The current server supports local mock mode and x402-protected mode. Model calls still use the deterministic mock provider; Anthropic is intentionally deferred.
+The server supports local mock mode, x402-protected mode, real Anthropic-backed Claude aliases for `POST /v1/model-call`, and a paid onchain market-signal endpoint.
 
 ## What This Is
 
 - A TypeScript Express server for raw-ish model calls.
-- A provider-agnostic gateway surface with a deterministic mock provider.
-- A local development target for `POST /v1/model-call`.
+- A provider-agnostic gateway surface with Anthropic and deterministic mock providers.
+- A local and paid target for `POST /v1/model-call`.
 - x402 payment protection for `POST /v1/model-call` when enabled.
 - Bazaar discovery metadata wired into the x402 route config.
 - A pricing and cost-estimation experiment for paid inference endpoints.
@@ -16,8 +16,6 @@ The current server supports local mock mode and x402-protected mode. Model calls
 ## What This Is Not Yet
 
 - Not an official Claude or Anthropic API.
-- Not a real Anthropic integration yet.
-- Not a real Anthropic integration yet.
 - Not a frontend, auth system, dashboard, or database.
 
 ## Architecture
@@ -31,13 +29,13 @@ HTTP client
        -> route-local express.json({ limit })
        -> Zod model-call validation
        -> provider selector
-       -> mock provider
+       -> Anthropic provider or mock fallback
        -> pricing + cost + margin calculation
        -> normalized JSON response
   -> centralized error handler
 ```
 
-`express.json()` is intentionally not mounted globally. In phase 2, real x402 middleware can be inserted before JSON parsing and Zod business validation on the paid route.
+`express.json()` is intentionally not mounted globally. The x402 middleware runs before JSON parsing and Zod business validation on paid routes.
 
 ## Local Setup
 
@@ -53,7 +51,7 @@ For local mock mode:
 X402_ENABLED=false
 ```
 
-No Anthropic key is needed for local mock mode.
+No Anthropic key is needed for local mock mode. Set `ANTHROPIC_API_KEY` to call real Claude locally after payment is disabled or in paid deployment after x402 payment succeeds.
 
 ## Test Health
 
@@ -77,14 +75,14 @@ Expected shape:
 curl -sS http://localhost:3000/v1/models
 ```
 
-The phase 1 model aliases are:
+The model aliases are:
 
 - `claude-haiku`
 - `claude-sonnet`
 - `claude-opus`
 - `mock-fast`
 
-Claude-family aliases resolve to the mock provider unless a real provider is added in a later phase.
+Claude-family aliases resolve to Anthropic when `ANTHROPIC_API_KEY` is configured, and to the deterministic mock provider when it is not.
 
 ## Test Model Call
 
@@ -110,7 +108,7 @@ X402_ENABLED=true
 X402_PAY_TO=0xYourWalletAddress
 X402_NETWORK=base-sepolia
 X402_FACILITATOR_URL=https://x402.org/facilitator
-X402_DEFAULT_PRICE_USD=0.05
+X402_DEFAULT_PRICE_USD=0.04
 X402_RESOURCE_BASE_URL=https://your-public-host.example
 ```
 
@@ -123,7 +121,7 @@ X402_ENABLED=true
 X402_PAY_TO=0xYourWalletAddress
 X402_NETWORK=base
 X402_FACILITATOR_URL=https://api.cdp.coinbase.com/platform/v2/x402
-X402_DEFAULT_PRICE_USD=0.05
+X402_DEFAULT_PRICE_USD=0.04
 X402_RESOURCE_BASE_URL=https://your-public-host.example
 CDP_API_KEY_ID=your-cdp-api-key-id
 # Use either CDP_API_KEY_SECRET or CDP_API_KEY_SECRET_B64 (see below)
@@ -176,10 +174,31 @@ Set these Railway variables:
 - `X402_RESOURCE_BASE_URL=https://<your-railway-domain>`
 - `CDP_API_KEY_ID`
 - `CDP_API_KEY_SECRET_B64` ← recommended for Railway (see above), or `CDP_API_KEY_SECRET`
+- `ANTHROPIC_API_KEY` for real Claude-backed `/v1/model-call`
+- `ANTHROPIC_HAIKU_MODEL=claude-haiku-4-5`
+- `ANTHROPIC_SONNET_MODEL=claude-sonnet-4-6`
+- `ANTHROPIC_OPUS_MODEL=claude-opus-4-7`
+- `MODEL_PROVIDER_TIMEOUT_MS=60000`
 
-`POST /v1/model-call` is protected by x402. The route uses one fixed v1 price per call from `X402_DEFAULT_PRICE_USD`. Provider execution is still mock-mode until a real provider is added.
+`POST /v1/model-call` is protected by x402. The route uses one fixed v1 price per call from `X402_DEFAULT_PRICE_USD`; default is `$0.04`.
 
 The x402 middleware is mounted before route-local JSON parsing and Zod validation. An unpaid request with no body or an invalid business body should return `402 Payment Required`, not a model-call validation error.
+
+## Anthropic Model Provider
+
+Set `ANTHROPIC_API_KEY` server-side to enable real Claude-backed model calls:
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-...
+ANTHROPIC_HAIKU_MODEL=claude-haiku-4-5
+ANTHROPIC_SONNET_MODEL=claude-sonnet-4-6
+ANTHROPIC_OPUS_MODEL=claude-opus-4-7
+MODEL_PROVIDER_TIMEOUT_MS=60000
+```
+
+The key is never sent to clients and should only be configured in `.env` locally or Railway environment variables in production. `mock-fast` always uses the mock provider. Claude aliases use Anthropic when the key exists and mock fallback when it does not.
+
+For v1, `/v1/model-call` uses one fixed x402 price before request-body parsing. The default is `$0.04` per call via `X402_DEFAULT_PRICE_USD`, and all pricing and provider-cost assumptions remain env-configurable.
 
 ## Market Signal Endpoint
 
@@ -255,9 +274,11 @@ Every successful response includes:
 
 This field is always present in every 200 response. The summary field contains observational language only and does not provide recommendations or projected outcomes.
 
-## Buyer Script: Real Paid x402 Request
+## Buyer Scripts: Real Paid x402 Requests
 
 `examples/buyer-market-signal.ts` sends a real x402-paid `POST /v1/market-signal` request against the Railway production endpoint using a local burner wallet.
+
+`examples/buyer-model-call.ts` sends a real x402-paid `POST /v1/model-call` request. In production, this calls Anthropic only after the x402 payment is accepted and `ANTHROPIC_API_KEY` is configured server-side.
 
 ### Burner wallet setup
 
@@ -279,11 +300,13 @@ This field is always present in every 200 response. The summary field contains o
 
    ```bash
    PAID_ENDPOINT_URL=https://agentic-x402-router-production.up.railway.app/v1/market-signal
+   PAID_MODEL_CALL_URL=https://agentic-x402-router-production.up.railway.app/v1/model-call
    ```
 
-### Run the buyer script
+### Run the buyer scripts
 
 ```bash
+npm run buyer:model-call
 npm run buyer:market-signal
 ```
 
@@ -295,7 +318,36 @@ The script will:
 4. POST the request body, automatically intercept the `402`, sign the USDC payment, and retry.
 5. Print the response status, any `X-Payment-Response` settlement header, and the full response JSON.
 
-Example output:
+Model-call example output:
+
+```
+=== x402 Model Call Buyer ===
+Endpoint : https://agentic-x402-router-production.up.railway.app/v1/model-call
+Wallet   : 0xYourBurnerAddress
+Network  : Base Sepolia (eip155:84532)
+Body     : {"model":"claude-sonnet","messages":[...],"max_tokens":300,"temperature":0.2,...}
+
+Status: 200 OK
+X-Payment-Response: <base64-encoded-settlement>
+
+Response:
+{
+  "ok": true,
+  "id": "req_...",
+  "model": "claude-sonnet",
+  "provider": "anthropic",
+  "text": "...",
+  "usage": {
+    "input_tokens": 123,
+    "output_tokens": 45,
+    "charged_usd": 0.04,
+    "estimated_provider_cost_usd": 0.001044,
+    "estimated_margin_usd": 0.038956
+  }
+}
+```
+
+Market-signal example output:
 
 ```
 === x402 Market Signal Buyer ===
@@ -328,6 +380,19 @@ Response:
 ## Bazaar Discovery
 
 Discovery metadata is centralized in `src/bazaar/metadata.ts` and wired into the x402 route config with `declareDiscoveryExtension` from `@x402/extensions/bazaar`. Both endpoints have their own metadata, tags, input/output schemas, and Bazaar extension factories in that file.
+
+After deploying Phase 6, refresh Bazaar/Agentic.Market indexing against the public Railway URL and confirm `/v1/model-call` appears for searches like:
+
+- `claude`
+- `anthropic`
+- `model call`
+- `llm inference`
+- `chat completion`
+- `text generation`
+- `reasoning`
+- `coding`
+- `cheap claude`
+- `x402`
 
 ## Manual Unpaid 402 Checklist
 
@@ -363,6 +428,8 @@ npm run dev
 npm run typecheck
 npm test
 npm run build
+npm run buyer:model-call
+npm run buyer:market-signal
 ```
 
 ## Pricing
@@ -370,7 +437,7 @@ npm run build
 Model call prices (per call):
 
 - `PRICE_CLAUDE_HAIKU_USD=0.02`
-- `PRICE_CLAUDE_SONNET_USD=0.05`
+- `PRICE_CLAUDE_SONNET_USD=0.04`
 - `PRICE_CLAUDE_OPUS_USD=0.20`
 - `PRICE_MOCK_FAST_USD=0.001`
 
@@ -385,13 +452,5 @@ Market signal prices (per call):
 ## Safety Notes
 
 - Raw prompts and message content are not logged, even partially.
-- No provider secrets are required or logged in phase 2.
+- Anthropic API keys, CDP keys, payment headers, authorization headers, and private keys are not logged.
 - This service is intended for legitimate paid inference calls. Do not use it to simulate demand, manipulate marketplace ranking, generate fake traffic, or automate self-calling loops.
-
-## Next Provider Phase
-
-Next:
-
-- Add real Anthropic provider behind the existing `ModelProvider` interface.
-- Keep x402 middleware before route-local JSON parsing and Zod validation.
-- Verify paid requests still return usage, revenue, margin, and latency.
