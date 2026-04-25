@@ -126,10 +126,41 @@ X402_FACILITATOR_URL=https://api.cdp.coinbase.com/platform/v2/x402
 X402_DEFAULT_PRICE_USD=0.05
 X402_RESOURCE_BASE_URL=https://your-public-host.example
 CDP_API_KEY_ID=your-cdp-api-key-id
+# Use either CDP_API_KEY_SECRET or CDP_API_KEY_SECRET_B64 (see below)
 CDP_API_KEY_SECRET=your-cdp-api-key-secret
 ```
 
-CDP mode requires both `CDP_API_KEY_ID` and `CDP_API_KEY_SECRET`. If the CDP secret is a PEM-style value in Railway or another hosted env system, paste it as one variable with escaped `\n` sequences; the app normalizes those escaped newlines before creating the facilitator client. Never commit CDP keys and never print them in logs.
+CDP mode requires `CDP_API_KEY_ID` and exactly one of `CDP_API_KEY_SECRET` or `CDP_API_KEY_SECRET_B64`.
+
+#### Providing the CDP secret
+
+**Option A — Plain text with escaped newlines (local `.env`):**
+
+Paste the PEM with literal `\n` sequences:
+
+```
+CDP_API_KEY_SECRET=-----BEGIN EC PRIVATE KEY-----\nabc123\n-----END EC PRIVATE KEY-----
+```
+
+The app normalizes `\n` escape sequences to real newlines before passing the key to the CDP client.
+
+**Option B — Base64-encoded PEM (recommended for Railway):**
+
+Railway can mangle multiline environment variable values. Encode the PEM file as a single-line base64 string on your local machine and set `CDP_API_KEY_SECRET_B64` instead:
+
+```bash
+base64 -i cdp_key.pem | tr -d '\n'
+```
+
+Copy the output and set it in Railway:
+
+```
+CDP_API_KEY_SECRET_B64=<output of the command above>
+```
+
+When `CDP_API_KEY_SECRET_B64` is set it takes precedence over `CDP_API_KEY_SECRET`. The app decodes it at startup; the decoded PEM is never logged.
+
+Never commit CDP keys to version control.
 
 ### Railway CDP env checklist
 
@@ -144,7 +175,7 @@ Set these Railway variables:
 - `X402_FACILITATOR_URL=https://api.cdp.coinbase.com/platform/v2/x402`
 - `X402_RESOURCE_BASE_URL=https://<your-railway-domain>`
 - `CDP_API_KEY_ID`
-- `CDP_API_KEY_SECRET`
+- `CDP_API_KEY_SECRET_B64` ← recommended for Railway (see above), or `CDP_API_KEY_SECRET`
 
 `POST /v1/model-call` is protected by x402. The route uses one fixed v1 price per call from `X402_DEFAULT_PRICE_USD`. Provider execution is still mock-mode until a real provider is added.
 

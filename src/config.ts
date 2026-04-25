@@ -66,6 +66,9 @@ const envSchema = z.object({
     .default("x402-paid model gateway for agent-discoverable LLM inference"),
   CDP_API_KEY_ID: optionalNonEmptyString,
   CDP_API_KEY_SECRET: optionalNonEmptyString,
+  // Base64-encoded variant: avoids Railway mangling multiline PEM values.
+  // When set, takes precedence over CDP_API_KEY_SECRET.
+  CDP_API_KEY_SECRET_B64: optionalNonEmptyString,
 
   ANTHROPIC_API_KEY: optionalNonEmptyString,
 
@@ -107,18 +110,25 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     if (isCdpFacilitatorUrl(value.X402_FACILITATOR_URL)) {
       const missingCdp = [
         ["CDP_API_KEY_ID", value.CDP_API_KEY_ID],
-        ["CDP_API_KEY_SECRET", value.CDP_API_KEY_SECRET]
+        // Accept either plain text or base64-encoded variant
+        ["CDP_API_KEY_SECRET or CDP_API_KEY_SECRET_B64", value.CDP_API_KEY_SECRET ?? value.CDP_API_KEY_SECRET_B64]
       ]
         .filter(([, envValue]) => !envValue)
         .map(([name]) => name);
 
       if (missingCdp.length > 0) {
         throw new Error(
-          `CDP facilitator requires CDP_API_KEY_ID and CDP_API_KEY_SECRET. Missing: ${missingCdp.join(", ")}`
+          `CDP facilitator requires CDP_API_KEY_ID and CDP_API_KEY_SECRET (or CDP_API_KEY_SECRET_B64). Missing: ${missingCdp.join(", ")}`
         );
       }
     }
   }
+
+  // Decode base64 CDP secret when provided; avoids Railway env-var newline mangling.
+  // The decoded PEM is never logged — it only flows into createFacilitatorConfig.
+  const cdpApiKeySecret: string | undefined = value.CDP_API_KEY_SECRET_B64
+    ? Buffer.from(value.CDP_API_KEY_SECRET_B64, "base64").toString("utf8")
+    : value.CDP_API_KEY_SECRET;
 
   return {
     nodeEnv: value.NODE_ENV,
@@ -141,7 +151,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
       serviceDescription: value.X402_SERVICE_DESCRIPTION,
       cdp: {
         apiKeyId: value.CDP_API_KEY_ID,
-        apiKeySecret: value.CDP_API_KEY_SECRET
+        apiKeySecret: cdpApiKeySecret
       }
     },
     pricing: createPriceConfig(env),

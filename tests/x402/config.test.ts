@@ -54,10 +54,10 @@ describe("x402 config", () => {
         X402_PAY_TO: "0x0000000000000000000000000000000000000000",
         X402_FACILITATOR_URL: "https://api.cdp.coinbase.com/platform/v2/x402"
       })
-    ).toThrow(/CDP facilitator requires CDP_API_KEY_ID and CDP_API_KEY_SECRET/);
+    ).toThrow(/CDP facilitator requires CDP_API_KEY_ID and CDP_API_KEY_SECRET \(or CDP_API_KEY_SECRET_B64\)/);
   });
 
-  it("allows CDP facilitator mode with CDP keys", () => {
+  it("allows CDP facilitator mode with CDP_API_KEY_SECRET", () => {
     const config = loadConfig({
       NODE_ENV: "test",
       X402_ENABLED: "true",
@@ -69,6 +69,57 @@ describe("x402 config", () => {
 
     expect(getX402FacilitatorMode(config)).toBe("cdp");
     expect(config.x402.cdp.apiKeyId).toBe("key-id");
+    expect(config.x402.cdp.apiKeySecret).toBe("key-secret");
+  });
+
+  it("decodes CDP_API_KEY_SECRET_B64 from base64 and uses it as the secret", () => {
+    const pem = "-----BEGIN EC PRIVATE KEY-----\nabc123\n-----END EC PRIVATE KEY-----";
+    const b64 = Buffer.from(pem).toString("base64");
+
+    const config = loadConfig({
+      NODE_ENV: "test",
+      X402_ENABLED: "true",
+      X402_PAY_TO: "0x0000000000000000000000000000000000000000",
+      X402_FACILITATOR_URL: "https://api.cdp.coinbase.com/platform/v2/x402",
+      CDP_API_KEY_ID: "key-id",
+      CDP_API_KEY_SECRET_B64: b64
+    });
+
+    expect(config.x402.cdp.apiKeySecret).toBe(pem);
+  });
+
+  it("prefers CDP_API_KEY_SECRET_B64 over CDP_API_KEY_SECRET when both are set", () => {
+    const pem = "-----BEGIN EC PRIVATE KEY-----\nfromB64\n-----END EC PRIVATE KEY-----";
+    const b64 = Buffer.from(pem).toString("base64");
+
+    const config = loadConfig({
+      NODE_ENV: "test",
+      X402_ENABLED: "true",
+      X402_PAY_TO: "0x0000000000000000000000000000000000000000",
+      X402_FACILITATOR_URL: "https://api.cdp.coinbase.com/platform/v2/x402",
+      CDP_API_KEY_ID: "key-id",
+      CDP_API_KEY_SECRET: "plain-text-secret",
+      CDP_API_KEY_SECRET_B64: b64
+    });
+
+    expect(config.x402.cdp.apiKeySecret).toBe(pem);
+  });
+
+  it("allows CDP mode with only CDP_API_KEY_SECRET_B64 (no plain-text secret)", () => {
+    const pem = "-----BEGIN EC PRIVATE KEY-----\nonly-b64\n-----END EC PRIVATE KEY-----";
+    const b64 = Buffer.from(pem).toString("base64");
+
+    const config = loadConfig({
+      NODE_ENV: "test",
+      X402_ENABLED: "true",
+      X402_PAY_TO: "0x0000000000000000000000000000000000000000",
+      X402_FACILITATOR_URL: "https://api.cdp.coinbase.com/platform/v2/x402",
+      CDP_API_KEY_ID: "key-id",
+      CDP_API_KEY_SECRET_B64: b64
+    });
+
+    expect(getX402FacilitatorMode(config)).toBe("cdp");
+    expect(config.x402.cdp.apiKeySecret).toBe(pem);
   });
 
   it("normalizes escaped newline sequences in CDP API key secrets", () => {

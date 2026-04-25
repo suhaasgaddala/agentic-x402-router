@@ -59,6 +59,31 @@ describe("x402 middleware", () => {
     expect(coinbaseFactory).toHaveBeenCalledWith("key-id", "line1\nline2");
   });
 
+  it("passes decoded PEM to Coinbase helper when CDP_API_KEY_SECRET_B64 is set", () => {
+    const pem = "-----BEGIN EC PRIVATE KEY-----\nbase64decoded\n-----END EC PRIVATE KEY-----";
+    const b64 = Buffer.from(pem).toString("base64");
+
+    const coinbaseFactory = vi.fn(() => ({
+      url: "https://api.cdp.coinbase.com/platform/v2/x402",
+      createAuthHeaders: async () => ({ verify: {}, settle: {}, supported: {} })
+    }));
+
+    createFacilitatorClient(
+      loadConfig({
+        NODE_ENV: "test",
+        X402_ENABLED: "true",
+        X402_PAY_TO: "0x0000000000000000000000000000000000000000",
+        X402_FACILITATOR_URL: "https://api.cdp.coinbase.com/platform/v2/x402",
+        CDP_API_KEY_ID: "key-id",
+        CDP_API_KEY_SECRET_B64: b64
+      }),
+      coinbaseFactory
+    );
+
+    // The factory must receive the fully decoded PEM, not the raw base64 string.
+    expect(coinbaseFactory).toHaveBeenCalledWith("key-id", pem);
+  });
+
   it("does not log CDP secret material when facilitator construction fails", () => {
     const loggerError = vi.spyOn(logger, "error");
     const secret = "super-secret-line1\\nsuper-secret-line2";
