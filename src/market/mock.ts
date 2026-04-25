@@ -74,8 +74,7 @@ function formatUsd(value: number): string {
 }
 
 // Builds a plain-English observation string from the signal values.
-// Must not contain: buy, sell, bullish, bearish, entry, exit, alpha, ape,
-// long, short, profit, guaranteed, or financial advice language.
+// Keep the language observational and avoid recommendations or projected outcomes.
 function buildSummary(signals: Partial<MarketSignalData>, timeframe: string): string {
   const parts: string[] = [];
 

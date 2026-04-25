@@ -38,7 +38,7 @@ export function createMarketSignalRouter(
         });
 
         const chargedUsd = config.marketSignal.priceUsd;
-        const estimatedProviderCostUsd = config.marketSignal.providerCostUsd;
+        const estimatedProviderCostUsd = registry.getProviderCostUsd(result.dataSource);
         const estimatedMarginUsd = formatUsdNumber(chargedUsd - estimatedProviderCostUsd);
         const latencyMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
 

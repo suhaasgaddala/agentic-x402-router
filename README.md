@@ -144,6 +144,25 @@ curl -sS -X POST http://localhost:3000/v1/market-signal \
 
 Response includes `data_source: "mock"` and a fixed disclaimer. Values are deterministic for the same `chain + token + timeframe` combination.
 
+### DexScreener mode
+
+DexScreener is the first real market data provider. It is enabled explicitly:
+
+```bash
+MARKET_SIGNAL_PROVIDER=dexscreener
+DEXSCREENER_BASE_URL=https://api.dexscreener.com
+MARKET_SIGNAL_PROVIDER_TIMEOUT_MS=5000
+COST_MARKET_SIGNAL_DEXSCREENER_USD=0
+```
+
+```bash
+curl -sS -X POST http://localhost:3000/v1/market-signal \
+  -H "content-type: application/json" \
+  --data @examples/market-signal.json
+```
+
+When enabled, the endpoint returns `data_source: "dexscreener"` if upstream data is available. If DexScreener is not explicitly configured or its base URL is invalid, the registry uses the mock provider. Runtime upstream failures are handled cleanly; the provider wrapper can return deterministic mock data when the fallback path is active.
+
 ### x402-enabled unpaid check
 
 With `X402_ENABLED=true` and valid env:
@@ -171,7 +190,7 @@ Every successful response includes:
 "disclaimer": "Market signals are informational only and do not constitute financial advice."
 ```
 
-This field is always present in every 200 response. The summary field contains observational language only — no buy, sell, bullish, bearish, or directional recommendations.
+This field is always present in every 200 response. The summary field contains observational language only and does not provide recommendations or projected outcomes.
 
 ## Bazaar Discovery
 
@@ -228,12 +247,13 @@ Market signal prices (per call):
 
 - `PRICE_MARKET_SIGNAL_USD=0.02`
 - `COST_MARKET_SIGNAL_PROVIDER_USD=0.005`
+- `COST_MARKET_SIGNAL_DEXSCREENER_USD=0`
 
 ## Safety Notes
 
 - Raw prompts and message content are not logged, even partially.
 - No provider secrets are required or logged in phase 2.
-- This service is intended for legitimate paid inference calls. Do not use it to simulate buyers, manipulate marketplace ranking, generate fake traffic, or automate self-calling loops.
+- This service is intended for legitimate paid inference calls. Do not use it to simulate demand, manipulate marketplace ranking, generate fake traffic, or automate self-calling loops.
 
 ## Next Provider Phase
 

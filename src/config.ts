@@ -42,6 +42,11 @@ const numberFromEnv = (fallback: number) =>
 const positiveIntegerFromEnv = (fallback: number) =>
   numberFromEnv(fallback).pipe(z.number().int().positive());
 
+const marketSignalProviderSchema = z
+  .enum(["mock", "dexscreener"])
+  .optional()
+  .default("mock");
+
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: positiveIntegerFromEnv(3000),
@@ -66,7 +71,11 @@ const envSchema = z.object({
   JSON_BODY_LIMIT: z.string().trim().default("1mb"),
 
   PRICE_MARKET_SIGNAL_USD: numberFromEnv(0.02).pipe(z.number().nonnegative()),
-  COST_MARKET_SIGNAL_PROVIDER_USD: numberFromEnv(0.005).pipe(z.number().nonnegative())
+  COST_MARKET_SIGNAL_PROVIDER_USD: numberFromEnv(0.005).pipe(z.number().nonnegative()),
+  MARKET_SIGNAL_PROVIDER: marketSignalProviderSchema,
+  DEXSCREENER_BASE_URL: z.string().trim().default("https://api.dexscreener.com"),
+  MARKET_SIGNAL_PROVIDER_TIMEOUT_MS: positiveIntegerFromEnv(5_000),
+  COST_MARKET_SIGNAL_DEXSCREENER_USD: numberFromEnv(0).pipe(z.number().nonnegative())
 });
 
 export type AppConfig = ReturnType<typeof loadConfig>;
@@ -117,7 +126,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     cost: createCostConfig(env),
     marketSignal: {
       priceUsd: value.PRICE_MARKET_SIGNAL_USD,
-      providerCostUsd: value.COST_MARKET_SIGNAL_PROVIDER_USD
+      providerCostUsd: value.COST_MARKET_SIGNAL_PROVIDER_USD,
+      provider: value.MARKET_SIGNAL_PROVIDER,
+      providerTimeoutMs: value.MARKET_SIGNAL_PROVIDER_TIMEOUT_MS,
+      dexscreener: {
+        baseUrl: value.DEXSCREENER_BASE_URL,
+        providerCostUsd: value.COST_MARKET_SIGNAL_DEXSCREENER_USD
+      }
     }
   };
 }
