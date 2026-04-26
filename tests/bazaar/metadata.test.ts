@@ -46,7 +46,7 @@ describe("bazaar metadata", () => {
     expect(example.provider).toBe("anthropic");
   });
 
-  it("model-call output example has correct pricing (0.04 USDC, consistent margin)", () => {
+  it("model-call output example has correct pricing (0.0009 USDC discovery price, consistent margin)", () => {
     const ext = createBazaarExtensions();
     type UsageShape = {
       charged_usd: number;
@@ -56,7 +56,8 @@ describe("bazaar metadata", () => {
     type BazaarShape = { bazaar: { info: { output: { example: { usage: UsageShape } } } } };
     const { usage } = (ext as unknown as BazaarShape).bazaar.info.output.example;
 
-    expect(usage.charged_usd).toBe(0.04);
+    // Discovery-phase price: 0.0009 USDC = 900 USDC base units.
+    expect(usage.charged_usd).toBe(0.0009);
     expect(usage.estimated_margin_usd).toBeCloseTo(
       usage.charged_usd - usage.estimated_provider_cost_usd,
       6

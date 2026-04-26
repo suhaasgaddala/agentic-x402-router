@@ -62,15 +62,18 @@ const evmSigner: ClientEvmSigner = {
 const paymentClient = new x402Client().register(NETWORK, new ExactEvmScheme(evmSigner));
 const fetchWithPayment = wrapFetchWithPayment(fetch, paymentClient);
 
+// max_tokens is intentionally small: at the 0.0009 USDC discovery price,
+// Sonnet provider cost (~$3/M in + $15/M out) can exceed the charged amount
+// for larger responses. Keep requests short during price discovery testing.
 const requestBody = {
   model: "claude-sonnet",
   messages: [
     {
       role: "user",
-      content: "In one concise paragraph, explain why x402-paid model access is useful for agents."
+      content: "In one sentence, explain why x402-paid model access is useful for agents."
     }
   ],
-  max_tokens: 300,
+  max_tokens: 80,
   temperature: 0.2,
   metadata: {
     client: "buyer-script",

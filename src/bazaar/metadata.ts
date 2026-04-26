@@ -163,12 +163,15 @@ export function createBazaarExtensions() {
         model: "claude-sonnet",
         provider: "anthropic",
         text: "Concise model output appears here.",
+        // Small call example (12 in / 45 out tokens).
+        // Sonnet at $3/M input + $15/M output → ~$0.000711 provider cost.
+        // Note: larger outputs push provider cost above the 0.0009 discovery price.
         usage: {
-          input_tokens: 1234,
-          output_tokens: 456,
-          estimated_provider_cost_usd: 0.010542,
-          charged_usd: 0.04,
-          estimated_margin_usd: 0.029458
+          input_tokens: 12,
+          output_tokens: 45,
+          estimated_provider_cost_usd: 0.000711,
+          charged_usd: 0.0009,
+          estimated_margin_usd: 0.000189
         },
         timing: { latency_ms: 1234 }
       }

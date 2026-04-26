@@ -434,14 +434,27 @@ npm run buyer:market-signal
 
 ## Pricing
 
-Model call prices (per call):
+### Model call (per call)
 
-- `PRICE_CLAUDE_HAIKU_USD=0.02`
-- `PRICE_CLAUDE_SONNET_USD=0.04`
-- `PRICE_CLAUDE_OPUS_USD=0.20`
-- `PRICE_MOCK_FAST_USD=0.001`
+| Model | Default price | Notes |
+|---|---|---|
+| `claude-haiku` | `0.0009` USDC | Discovery price |
+| `claude-sonnet` | `0.0009` USDC | Discovery price |
+| `claude-opus` | `0.20` USDC | — |
+| `mock-fast` | `0.001` USDC | Local testing only |
+
+`0.0009 USDC = 900 USDC base units` (6-decimal USDC on Base). The x402 price string encodes this as `$0.000900`.
 
 Provider cost estimates are configurable with the `COST_*_PER_MTOK_USD` env vars in `.env.example`.
+
+#### Discovery pricing caveat
+
+`0.0009` is an aggressive volume/discovery price intended for Agentic.Market ranking and early traction — it is **not a sustainable production margin**.
+
+- Raw Anthropic Sonnet costs `$3/M input + $15/M output`. A call with ~45 output tokens costs ~`$0.000711` in provider fees, leaving only `~$0.000189` margin.
+- Larger outputs (`max_tokens > ~150`) can push provider cost **above** `0.0009`, resulting in a net loss per call.
+- Keep `max_tokens ≤ 150` while running at this price.
+- For production scale: route through Haiku, apply cloud credit discounts, enforce stricter token caps, or raise the price.
 
 Market signal prices (per call):
 

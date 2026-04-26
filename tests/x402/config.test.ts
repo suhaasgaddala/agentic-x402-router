@@ -23,6 +23,14 @@ describe("x402 config", () => {
     expect(formatX402UsdPrice(0.05)).toBe("$0.050000");
   });
 
+  it("formats discovery-range prices correctly for 6-decimal USDC", () => {
+    // 0.0009 USD = 900 USDC base units (6-decimal USDC like on Base).
+    // The x402 price string must encode all six decimal places so the
+    // on-chain amount resolves to exactly 900 and not 0 or 9.
+    expect(formatX402UsdPrice(0.0009)).toBe("$0.000900");
+    expect(formatX402UsdPrice(0.001)).toBe("$0.001000");
+  });
+
   it("requires x402 env when enabled", () => {
     expect(() => loadConfig({ NODE_ENV: "test", X402_ENABLED: "true" })).toThrow(
       /X402_ENABLED=true requires/
@@ -156,7 +164,8 @@ describe("x402 config", () => {
       resource: "https://gateway.example/v1/model-call",
       mimeType: "application/json",
       accepts: expect.objectContaining({
-        price: "$0.040000"
+        // 0.0009 USD = 900 USDC base units (6-decimal); encoded as $0.000900
+        price: "$0.000900"
       })
     });
     expect(route.extensions).toHaveProperty("bazaar");
