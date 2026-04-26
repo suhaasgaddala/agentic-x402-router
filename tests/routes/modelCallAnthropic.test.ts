@@ -74,7 +74,7 @@ describe("model-call Anthropic route integration", () => {
           usage: {
             input_tokens: 11,
             output_tokens: 7,
-            charged_usd: 0.0009
+            charged_usd: 0.001
           }
         });
         expect(response.body).not.toHaveProperty("raw");

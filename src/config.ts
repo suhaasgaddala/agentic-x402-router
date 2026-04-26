@@ -57,7 +57,7 @@ const envSchema = z.object({
   X402_PAY_TO: optionalNonEmptyString,
   X402_NETWORK: z.string().trim().default("base-sepolia"),
   X402_FACILITATOR_URL: optionalNonEmptyString,
-  X402_DEFAULT_PRICE_USD: numberFromEnv(0.0009).pipe(z.number().nonnegative()),
+  X402_DEFAULT_PRICE_USD: numberFromEnv(0.001).pipe(z.number().nonnegative()),
   X402_RESOURCE_BASE_URL: optionalNonEmptyString,
   X402_SERVICE_NAME: z.string().trim().default("x402-model-gateway"),
   X402_SERVICE_DESCRIPTION: z

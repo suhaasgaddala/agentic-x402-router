@@ -5,10 +5,10 @@ describe("pricing", () => {
   it("returns default prices", () => {
     const config = createPriceConfig({});
 
-    // 0.0009 is the discovery-phase price for Agentic.Market volume testing.
+    // 0.001 is the discovery-phase price for Agentic.Market volume testing (1000 USDC base units).
     // Anthropic Sonnet provider cost can exceed this for larger outputs.
-    expect(getPriceForModel("claude-haiku", config)).toBe(0.0009);
-    expect(getPriceForModel("claude-sonnet", config)).toBe(0.0009);
+    expect(getPriceForModel("claude-haiku", config)).toBe(0.001);
+    expect(getPriceForModel("claude-sonnet", config)).toBe(0.001);
     expect(getPriceForModel("claude-opus", config)).toBe(0.2);
     expect(getPriceForModel("mock-fast", config)).toBe(0.001);
   });
