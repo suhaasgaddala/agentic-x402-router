@@ -13,11 +13,6 @@ The server supports local mock mode, x402-protected mode, real Anthropic-backed 
 - Bazaar discovery metadata wired into the x402 route config.
 - A pricing and cost-estimation experiment for paid inference endpoints.
 
-## What This Is Not Yet
-
-- Not an official Claude or Anthropic API.
-- Not a frontend, auth system, dashboard, or database.
-
 ## Architecture
 
 ```text
