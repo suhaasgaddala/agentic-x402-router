@@ -109,7 +109,7 @@ export const bazaarMetadata = {
   mimeType: "application/json",
   tags: bazaarTags,
   description:
-    "Pay-per-call x402 model gateway for agent-accessible Claude-backed LLM inference. Supports Anthropic-backed Claude aliases through a simple JSON messages API. Useful for chat completion, text generation, summarization, coding help, planning, reasoning, extraction, and cheap Claude model access through x402.",
+    "Pay-per-call x402 model gateway for agent-accessible Claude-backed LLM inference. Supports Anthropic Claude Sonnet, Haiku, and Opus through a simple model API and JSON messages interface. Useful for chat completion, text generation, summarization, coding help, planning, reasoning, extraction, agent tools, and cheap Claude model access through x402.",
   models: bazaarModelAliases,
   pricing: {
     type: "fixed",
@@ -167,8 +167,8 @@ export function createBazaarExtensions() {
           input_tokens: 1234,
           output_tokens: 456,
           estimated_provider_cost_usd: 0.010542,
-          charged_usd: 0.05,
-          estimated_margin_usd: 0.039458
+          charged_usd: 0.04,
+          estimated_margin_usd: 0.029458
         },
         timing: { latency_ms: 1234 }
       }

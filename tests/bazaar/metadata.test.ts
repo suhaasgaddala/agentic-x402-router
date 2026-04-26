@@ -46,6 +46,23 @@ describe("bazaar metadata", () => {
     expect(example.provider).toBe("anthropic");
   });
 
+  it("model-call output example has correct pricing (0.04 USDC, consistent margin)", () => {
+    const ext = createBazaarExtensions();
+    type UsageShape = {
+      charged_usd: number;
+      estimated_provider_cost_usd: number;
+      estimated_margin_usd: number;
+    };
+    type BazaarShape = { bazaar: { info: { output: { example: { usage: UsageShape } } } } };
+    const { usage } = (ext as unknown as BazaarShape).bazaar.info.output.example;
+
+    expect(usage.charged_usd).toBe(0.04);
+    expect(usage.estimated_margin_usd).toBeCloseTo(
+      usage.charged_usd - usage.estimated_provider_cost_usd,
+      6
+    );
+  });
+
   it("model-call metadata avoids official API positioning and secret-like values", () => {
     const text = JSON.stringify({
       tags: bazaarTags,
@@ -57,6 +74,18 @@ describe("bazaar metadata", () => {
     expect(text).not.toContain("official anthropic");
     expect(text).not.toContain("sk-ant");
     expect(text).not.toContain("api key");
+  });
+
+  it("description includes key search terms", () => {
+    const desc = bazaarMetadata.description.toLowerCase();
+    expect(desc).toContain("claude sonnet");
+    expect(desc).toContain("anthropic");
+    expect(desc).toContain("chat completion");
+    expect(desc).toContain("cheap claude");
+    expect(desc).toContain("agent tools");
+    expect(desc).toContain("x402");
+    expect(desc).toContain("model api");
+    expect(desc).toContain("llm inference");
   });
 
   it("includes model list and examples", () => {
