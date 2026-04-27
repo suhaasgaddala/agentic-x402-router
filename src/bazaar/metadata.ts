@@ -122,7 +122,7 @@ export const bazaarMetadata = {
       input: {
         model: "claude-sonnet",
         messages: [{ role: "user", content: "Summarize this launch note in five bullets: ..." }],
-        max_tokens: 500,
+        max_tokens: 200,
         temperature: 0.2,
         metadata: { task: "summarization" }
       }
@@ -132,7 +132,7 @@ export const bazaarMetadata = {
       input: {
         model: "claude-sonnet",
         messages: [{ role: "user", content: "Review this TypeScript diff for correctness risks: ..." }],
-        max_tokens: 800,
+        max_tokens: 250,
         temperature: 0.1,
         metadata: { task: "code-review" }
       }
@@ -142,7 +142,7 @@ export const bazaarMetadata = {
       input: {
         model: "claude-haiku",
         messages: [{ role: "user", content: "Compare these two rollout plans and recommend one: ..." }],
-        max_tokens: 700,
+        max_tokens: 200,
         temperature: 0.2,
         metadata: { task: "planning" }
       }

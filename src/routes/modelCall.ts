@@ -16,8 +16,8 @@ export function createModelCallRouter(
 ): Router {
   const router = Router();
   const schema = createModelCallSchema({
-    maxInputChars: config.maxInputChars,
-    maxOutputTokens: config.maxOutputTokens
+    maxInputChars: config.modelCallCaps.maxInputChars,
+    maxOutputTokens: config.modelCallCaps.maxOutputTokens
   });
   const providers = createProviderRegistry(config);
 

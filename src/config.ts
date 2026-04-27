@@ -78,6 +78,11 @@ const envSchema = z.object({
 
   MAX_INPUT_CHARS: positiveIntegerFromEnv(50_000),
   MAX_OUTPUT_TOKENS: positiveIntegerFromEnv(2_000),
+  // Safety caps enforced on POST /v1/model-call. Tighter than the global max
+  // because 0.001 USDC discovery price means large Sonnet outputs cost more than
+  // the charged amount. Keep these low to protect provider credits.
+  MODEL_CALL_MAX_OUTPUT_TOKENS: positiveIntegerFromEnv(300),
+  MODEL_CALL_MAX_INPUT_CHARS: positiveIntegerFromEnv(8_000),
   JSON_BODY_LIMIT: z.string().trim().default("1mb"),
 
   PRICE_MARKET_SIGNAL_USD: numberFromEnv(0.02).pipe(z.number().nonnegative()),
@@ -149,6 +154,10 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env) {
     },
     maxInputChars: value.MAX_INPUT_CHARS,
     maxOutputTokens: value.MAX_OUTPUT_TOKENS,
+    modelCallCaps: {
+      maxOutputTokens: value.MODEL_CALL_MAX_OUTPUT_TOKENS,
+      maxInputChars: value.MODEL_CALL_MAX_INPUT_CHARS
+    },
     jsonBodyLimit: value.JSON_BODY_LIMIT,
     x402: {
       enabled: value.X402_ENABLED,

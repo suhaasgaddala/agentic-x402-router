@@ -18,11 +18,11 @@ The server supports local mock mode, x402-protected mode, real Anthropic-backed 
 ```text
 HTTP client
   -> request id middleware
-  -> free routes: GET /health, GET /v1/models
+  -> free routes: GET /, GET /health, GET /v1/models, GET /v1/capabilities
   -> POST /v1/model-call
        -> x402 middleware (no-op when X402_ENABLED=false)
        -> route-local express.json({ limit })
-       -> Zod model-call validation
+       -> Zod model-call validation (+ safety caps)
        -> provider selector
        -> Anthropic provider or mock fallback
        -> pricing + cost + margin calculation
@@ -450,6 +450,17 @@ Provider cost estimates are configurable with the `COST_*_PER_MTOK_USD` env vars
 - Larger outputs (`max_tokens > ~150`) can push provider cost **above** `0.001`, resulting in a net loss per call.
 - Keep `max_tokens ≤ 150` while running at this price.
 - For production scale: route through Haiku, apply cloud credit discounts, enforce stricter token caps, or raise the price.
+
+#### Safety caps for /v1/model-call
+
+Two env vars enforce hard limits on model-call requests to limit provider cost exposure:
+
+| Env var | Default | Description |
+|---|---|---|
+| `MODEL_CALL_MAX_OUTPUT_TOKENS` | `300` | Maximum `max_tokens` accepted per request |
+| `MODEL_CALL_MAX_INPUT_CHARS` | `8000` | Maximum total character length across all messages |
+
+Requests exceeding either cap receive a `400 VALIDATION_ERROR` **after** x402 payment passes (or in local mock mode). x402 payment is still enforced before validation, so unpaid oversized requests still return `402 Payment Required`.
 
 Market signal prices (per call):
 
